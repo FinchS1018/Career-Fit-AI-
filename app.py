@@ -17,6 +17,65 @@ except ImportError:  # pragma: no cover - handled in the UI
 APP_TITLE = "Career Fit AI"
 APP_SUBTITLE = "实习/校招场景下的 AI 简历匹配助手"
 
+DIMENSION_ICONS = {
+    "学历/院校背景": "🏫",
+    "专业相关性": "🎓",
+    "实习经历匹配": "💼",
+    "项目成果与量化证据": "📌",
+    "技能工具匹配": "🛠️",
+    "行业/岗位理解": "🧭",
+}
+
+UI_STYLE = """
+<style>
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
+    .hero {
+        padding: 1.4rem 1.6rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #f8fafc 0%, #eef6ff 52%, #f7f2ff 100%);
+        margin-bottom: 1.2rem;
+    }
+    .hero .eyebrow {
+        color: #475569;
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    .hero h1 {
+        font-size: 2.1rem;
+        margin: 0;
+        color: #111827;
+    }
+    .hero p {
+        color: #475569;
+        margin: 0.35rem 0 0;
+        font-size: 1.02rem;
+    }
+    div[data-testid="stMetric"] {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 0.9rem 1rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    div[data-testid="stTextArea"] textarea,
+    div[data-testid="stTextInput"] input {
+        border-radius: 10px;
+    }
+    .stButton > button {
+        border-radius: 10px;
+        font-weight: 700;
+    }
+    section[data-testid="stSidebar"] {
+        background: #f8fafc;
+    }
+</style>
+"""
+
 DEFAULT_PROFILE = {
     "education": "计算机科学与技术本科在读，预计 2027 年毕业。",
     "major": "计算机科学与技术专业，学习过数据结构、操作系统、计算机网络、数据库系统和软件工程等课程。",
@@ -256,6 +315,10 @@ def normalize_report(raw_text: str) -> dict[str, Any]:
 OPENAI_MODEL = "gpt-5-mini"
 
 
+def apply_custom_style() -> None:
+    st.markdown(UI_STYLE, unsafe_allow_html=True)
+
+
 def analyze_with_openai(profile_text: str, jd_text: str, api_key: str) -> dict[str, Any]:
     if OpenAI is None:
         raise RuntimeError("未安装 openai 包。请先运行 pip install -r requirements.txt。")
@@ -276,20 +339,21 @@ def render_score_overview(report: dict[str, Any]) -> None:
     verdict = report.get("verdict", "未判断")
 
     col1, col2, col3 = st.columns([1, 1, 3])
-    col1.metric("总匹配度", f"{score}/100")
-    col2.metric("投递建议", verdict)
+    col1.metric("🎯 总匹配度", f"{score}/100")
+    col2.metric("🚦 投递建议", verdict)
     col3.write(report.get("summary", ""))
 
 
 def render_dimension_scores(report: dict[str, Any]) -> None:
-    st.subheader("维度评分")
+    st.subheader("📊 维度评分")
     for item in report.get("dimension_scores", []):
         score = int(item["score"])
         weight = int(item["weight"])
         ratio = score / weight if weight else 0
+        icon = DIMENSION_ICONS.get(item["dimension"], "📍")
         with st.container(border=True):
             col1, col2 = st.columns([2, 5])
-            col1.markdown(f"**{item['dimension']}**")
+            col1.markdown(f"**{icon} {item['dimension']}**")
             col1.metric("得分", f"{score}/{weight}")
             col2.progress(ratio)
             col2.write(f"证据：{item['evidence']}")
@@ -314,7 +378,7 @@ def render_score_table(report: dict[str, Any]) -> None:
 def render_report(report: dict[str, Any]) -> None:
     render_score_overview(report)
 
-    tab1, tab2, tab3, tab4 = st.tabs(["维度评分", "评分表", "简历改写", "面试准备"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 维度评分", "📋 评分表", "✍️ 简历改写", "🎙️ 面试准备"])
 
     with tab1:
         render_dimension_scores(report)
@@ -336,45 +400,55 @@ def render_report(report: dict[str, Any]) -> None:
                 st.write(item.get("reason", ""))
 
     with tab4:
-        st.markdown("**可能被问到的问题**")
+        st.markdown("**🎙️ 可能被问到的问题**")
         for question in report.get("interview_questions", []):
             st.write(f"- {question}")
 
-        st.markdown("**下一步行动**")
+        st.markdown("**✅ 下一步行动**")
         for action in report.get("next_actions", []):
             st.write(f"- {action}")
 
 
 def main() -> None:
-    st.set_page_config(page_title=APP_TITLE, page_icon="CV", layout="wide")
-    st.title(APP_TITLE)
-    st.caption(APP_SUBTITLE)
+    st.set_page_config(page_title=APP_TITLE, page_icon="🎯", layout="wide")
+    apply_custom_style()
+    st.markdown(
+        f"""
+        <div class="hero">
+            <div class="eyebrow">🎯 求职匹配分析工具</div>
+            <h1>{APP_TITLE}</h1>
+            <p>{APP_SUBTITLE}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     with st.sidebar:
-        st.header("设置")
-        analysis_mode = st.radio("分析模式", ["本地规则分析", "OpenAI 深度分析"])
+        st.header("⚙️ 设置")
+        analysis_mode = st.radio("🧭 分析模式", ["本地规则分析", "OpenAI 深度分析"])
         user_api_key = ""
         if analysis_mode == "OpenAI 深度分析":
-            user_api_key = st.text_input("OpenAI API key", type="password", placeholder="sk-...")
+            user_api_key = st.text_input("🔑 OpenAI API key", type="password", placeholder="sk-...")
             st.caption("API key 仅用于本次浏览器会话，不会写入代码仓库。")
-        st.markdown("**当前评分规则**")
+        st.markdown("**📌 当前评分规则**")
         for item in RUBRIC:
-            st.write(f"- {item['name']}：{item['weight']} 分")
+            icon = DIMENSION_ICONS.get(item["name"], "📍")
+            st.write(f"- {icon} {item['name']}：{item['weight']} 分")
 
-    st.subheader("填写你的求职画像")
+    st.subheader("🧩 填写你的求职画像")
     col1, col2 = st.columns(2)
     with col1:
-        school_name = st.text_input("学校名称", value="某理工大学")
+        school_name = st.text_input("🏫 学校名称", value="某理工大学")
         school_tier = detect_school_tier(school_name)
         st.caption(f"院校识别：{school_tier['label']}。该信息仅作为竞争力参考，不作为单一判断依据。")
-        education_detail = st.text_area("学历/院校背景补充", value=DEFAULT_PROFILE["education"], height=110)
-        major = st.text_area("专业相关性", value=DEFAULT_PROFILE["major"], height=110)
-        internship = st.text_area("实习经历", value=DEFAULT_PROFILE["internship"], height=170)
-        project_results = st.text_area("项目成果与量化证据", value=DEFAULT_PROFILE["project_results"], height=140)
+        education_detail = st.text_area("🎓 学历/院校背景补充", value=DEFAULT_PROFILE["education"], height=110)
+        major = st.text_area("📚 专业相关性", value=DEFAULT_PROFILE["major"], height=110)
+        internship = st.text_area("💼 实习经历", value=DEFAULT_PROFILE["internship"], height=170)
+        project_results = st.text_area("📌 项目成果与量化证据", value=DEFAULT_PROFILE["project_results"], height=140)
     with col2:
-        skills = st.text_area("技能工具", value=DEFAULT_PROFILE["skills"], height=110)
-        industry_role_fit = st.text_area("行业/岗位理解", value=DEFAULT_PROFILE["industry_role_fit"], height=140)
-        jd_text = st.text_area("粘贴目标岗位 JD", value=DEFAULT_JD, height=280)
+        skills = st.text_area("🛠️ 技能工具", value=DEFAULT_PROFILE["skills"], height=110)
+        industry_role_fit = st.text_area("🧭 行业/岗位理解", value=DEFAULT_PROFILE["industry_role_fit"], height=140)
+        jd_text = st.text_area("📝 粘贴目标岗位 JD", value=DEFAULT_JD, height=280)
 
     education = (
         f"学校名称：{school_tier['school'] or school_name}；"
@@ -403,7 +477,10 @@ def main() -> None:
     }
     missing_fields = [label for label, value in required_fields.items() if not value.strip()]
 
-    if st.button("开始分析", type="primary", use_container_width=True):
+    if missing_fields:
+        st.info(f"还需填写：{'、'.join(missing_fields)}。")
+
+    if st.button("🚀 开始分析", type="primary", use_container_width=True, disabled=bool(missing_fields)):
         if missing_fields:
             st.warning(f"请先填写所有输入框。缺少：{'、'.join(missing_fields)}。")
             return
