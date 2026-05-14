@@ -7,6 +7,7 @@ import streamlit as st
 
 from rubric import RUBRIC, RUBRIC_TEXT, get_rubric_item
 from school_tiers import detect_school_tier
+from major_classifier import score_major_fit
 
 try:
     from openai import OpenAI
@@ -177,6 +178,9 @@ def score_by_keywords(profile_text: str, jd_text: str, key: str) -> tuple[int, s
                 "学校名称和学历信息已纳入院校背景评分。",
                 "院校背景只是竞争力参考，最终仍需结合实习、项目和技能证据判断。",
             )
+
+    if key == "major":
+        return score_major_fit(profile_text, jd_text, weight)
 
     keywords = rubric_item["demo_keywords"]
     jd_hits = extract_keywords(jd_text, keywords)
