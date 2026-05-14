@@ -1,5 +1,4 @@
 import json
-import os
 import re
 from typing import Any
 
@@ -254,7 +253,10 @@ def normalize_report(raw_text: str) -> dict[str, Any]:
     return json.loads(cleaned)
 
 
-def analyze_with_openai(profile_text: str, jd_text: str, model: str, api_key: str) -> dict[str, Any]:
+OPENAI_MODEL = "gpt-5-mini"
+
+
+def analyze_with_openai(profile_text: str, jd_text: str, api_key: str) -> dict[str, Any]:
     if OpenAI is None:
         raise RuntimeError("未安装 openai 包。请先运行 pip install -r requirements.txt。")
 
@@ -263,7 +265,7 @@ def analyze_with_openai(profile_text: str, jd_text: str, model: str, api_key: st
 
     client = OpenAI(api_key=api_key.strip())
     response = client.responses.create(
-        model=model,
+        model=OPENAI_MODEL,
         input=build_prompt(profile_text, jd_text),
     )
     return post_process_report(normalize_report(response.output_text))
@@ -350,7 +352,6 @@ def main() -> None:
 
     with st.sidebar:
         st.header("设置")
-        model = st.text_input("OpenAI 模型", value=os.environ.get("OPENAI_MODEL", "gpt-5-mini"))
         analysis_mode = st.radio("分析模式", ["本地规则分析", "OpenAI 深度分析"])
         user_api_key = ""
         if analysis_mode == "OpenAI 深度分析":
@@ -390,16 +391,27 @@ def main() -> None:
         "industry_role_fit": industry_role_fit,
     }
     profile_text = build_profile_text(profile)
+    required_fields = {
+        "学校名称": school_name,
+        "学历/院校背景补充": education_detail,
+        "专业相关性": major,
+        "实习经历": internship,
+        "项目成果与量化证据": project_results,
+        "技能工具": skills,
+        "行业/岗位理解": industry_role_fit,
+        "目标岗位 JD": jd_text,
+    }
+    missing_fields = [label for label, value in required_fields.items() if not value.strip()]
 
     if st.button("开始分析", type="primary", use_container_width=True):
-        if not any(value.strip() for value in profile.values()) or not jd_text.strip():
-            st.warning("请先填写求职画像和岗位 JD。")
+        if missing_fields:
+            st.warning(f"请先填写所有输入框。缺少：{'、'.join(missing_fields)}。")
             return
 
         try:
             with st.spinner("正在按维度分析匹配度..."):
                 if analysis_mode == "OpenAI 深度分析":
-                    report = analyze_with_openai(profile_text, jd_text, model, user_api_key)
+                    report = analyze_with_openai(profile_text, jd_text, user_api_key)
                 else:
                     report = local_demo_analysis(profile_text, jd_text)
             render_report(report)
