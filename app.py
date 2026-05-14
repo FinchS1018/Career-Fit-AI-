@@ -276,30 +276,9 @@ def local_demo_analysis(profile_text: str, jd_text: str) -> dict[str, Any]:
         {
             "summary": "这是本地规则 demo 结果。接入 OpenAI API 后，可获得更细的语义证据和改写建议。",
             "dimension_scores": dimension_scores,
-            "rewrite_suggestions": [
-                {
-                    "original": "支持招聘流程，包括简历筛选、候选人沟通、面试安排。",
-                    "suggested": "支持业务线招聘交付，覆盖岗位需求理解、候选人筛选、面试协调与入职跟进，并维护转化数据。",
-                    "reason": "把事务动作改写为业务支持、流程推进和数据意识，更贴近中文实习岗位筛选逻辑。",
-                },
-                {
-                    "original": "参与社会调研项目。",
-                    "suggested": "参与社会调研项目，负责访谈提纲设计、资料整理与报告撰写，可迁移至员工访谈、组织氛围调研和 HR 项目复盘。",
-                    "reason": "把社科背景转译为 HRBP/组织支持可理解的能力证据。",
-                },
-            ],
-            "interview_questions": [
-                "你在上一段 HR 实习中如何理解业务方的用人需求？",
-                "你如何判断一段经历是否能支撑 JD 中的岗位要求？",
-                "如果 HRBP 岗位中招聘占比较高，你如何评估是否值得投递？",
-                "你是否做过数据整理或流程复盘？结果如何被使用？",
-                "你的社科研究能力如何迁移到员工访谈或组织氛围分析？",
-            ],
-            "next_actions": [
-                "把简历中的动作描述改为“业务对象 + 任务 + 方法 + 结果”。",
-                "补充 1-2 条数据或流程改进证据。",
-                "面试前准备岗位真实职责判断问题，确认招聘、HRBP 项目和员工沟通的占比。",
-            ],
+            "rewrite_suggestions": [],
+            "interview_questions": [],
+            "next_actions": [],
         }
     )
 
@@ -378,35 +357,45 @@ def render_score_table(report: dict[str, Any]) -> None:
 def render_report(report: dict[str, Any]) -> None:
     render_score_overview(report)
 
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 维度评分", "📋 评分表", "✍️ 简历改写", "🎙️ 面试准备"])
+    tab_labels = ["📊 维度评分", "📋 评分表"]
+    show_rewrite = bool(report.get("rewrite_suggestions"))
+    show_interview = bool(report.get("interview_questions") or report.get("next_actions"))
+    if show_rewrite:
+        tab_labels.append("✍️ 简历改写")
+    if show_interview:
+        tab_labels.append("🎙️ 面试准备")
 
-    with tab1:
+    tabs = st.tabs(tab_labels)
+
+    with tabs[0]:
         render_dimension_scores(report)
 
-    with tab2:
+    with tabs[1]:
         render_score_table(report)
 
-    with tab3:
-        suggestions = report.get("rewrite_suggestions", [])
-        if not suggestions:
-            st.info("当前没有生成具体改写建议。")
-        for item in suggestions:
-            with st.container(border=True):
-                st.markdown("**原表达**")
-                st.write(item.get("original", ""))
-                st.markdown("**建议表达**")
-                st.write(item.get("suggested", ""))
-                st.markdown("**理由**")
-                st.write(item.get("reason", ""))
+    tab_index = 2
+    if show_rewrite:
+        with tabs[tab_index]:
+            suggestions = report.get("rewrite_suggestions", [])
+            for item in suggestions:
+                with st.container(border=True):
+                    st.markdown("**原表达**")
+                    st.write(item.get("original", ""))
+                    st.markdown("**建议表达**")
+                    st.write(item.get("suggested", ""))
+                    st.markdown("**理由**")
+                    st.write(item.get("reason", ""))
+        tab_index += 1
 
-    with tab4:
-        st.markdown("**🎙️ 可能被问到的问题**")
-        for question in report.get("interview_questions", []):
-            st.write(f"- {question}")
+    if show_interview:
+        with tabs[tab_index]:
+            st.markdown("**🎙️ 可能被问到的问题**")
+            for question in report.get("interview_questions", []):
+                st.write(f"- {question}")
 
-        st.markdown("**✅ 下一步行动**")
-        for action in report.get("next_actions", []):
-            st.write(f"- {action}")
+            st.markdown("**✅ 下一步行动**")
+            for action in report.get("next_actions", []):
+                st.write(f"- {action}")
 
 
 def main() -> None:
